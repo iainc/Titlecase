@@ -1,0 +1,76 @@
+smallWordExpression = {
+    (?<!q&)a|an|and|as|at(?!&t)|but|by|en|for|if|in|of|on|or|the|to|v[.]?|via|vs[.]? 
+}
+
+apostropheExpression = {
+    (?: ['’] [[:lower:]]* )?
+}
+
+titlecaseExpression = {
+    \b (_*) (?:
+        (
+			# File path
+			(?<=[\ ][/\\]) [[:alpha:]]+ [-_[:alpha:]/\\]+
+        	# or URL, domain, or email
+          	| [-_[:alpha:]]+ [@.:] [-_[:alpha:]@.:/]+ $apostropheExpression
+		)
+        # or small word (case-insensitive)
+        | ( (?i: $smallWordExpression ) $apostropheExpression )
+        # or word w/o internal caps
+        | ( [[:alpha:]] [[:lower:]'’()\[\]{}]* $apostropheExpression )
+        # or some other word
+        | ( [[:alpha:]] [[:alpha:]'’()\[\]{}]* $apostropheExpression )
+    ) (_*) \b
+}
+
+# Exceptions for small words
+
+## Capitalize at start of title
+startExceptionExpression = {
+	(?i)
+    # Start of title
+    (  \A [[:punct:]]*
+    # or of subsentence
+    |  [:.;?!][\ ]+
+    # or of inserted subphrase
+    |  [\ ]['"“‘(\[][\ ]*     )
+    # followed by small word
+    ( $smallWordExpression ) \b
+}
+
+## Capitalize at end of title
+endExceptionExpression = {
+    (?i)
+    # Small word
+    \b ( $smallWordExpression )
+    # at the end of the title
+    (?= [[:punct:]]* \Z
+    # or of an inserted subphrase?
+    |   ['"’”)\]] [\ ] )
+}
+
+# Exceptions for small words in hyphenated compound words
+
+## "in-flight" -> In-Flight
+startHyphenatedCompoundExpression = {
+    (?i)
+    \b
+    # Negative lookbehind for a hyphen; we don't want to match man-in-the-middle but do want (in-flight)
+    (?<! -)
+    ( $smallWordExpression )
+    # Lookahead for "-someword"
+    (?= -[[:alpha:]]+)
+}
+
+## "Stand-in" -> "Stand-In" (Stand is already capped at this point)
+endHyphenatedCompoundExpression = {
+    (?i)
+    \b
+    # Negative lookbehind for a hyphen; we don't want to match man-in-the-middle but do want (stand-in)
+    (?<!…)
+    # $1 = first word and hyphen, should already be properly capped
+    ( [[:alpha:]]+- )
+    ( $smallWordExpression )
+    # Negative lookahead for another '-'
+    (?!	- )
+}
