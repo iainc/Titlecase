@@ -9,12 +9,6 @@
 #import "NSString+IATitlecase.h"
 #import "Aspects.h"
 
-@interface NSString (IATextPrivate)
-
-- (NSRange)wordRangeForRange:(NSRange)range;
-
-@end
-
 @implementation NSTextView (IATitlecase)
 
 + (void)load {
@@ -38,23 +32,25 @@
     } error:&error];
 }
 
-- (IBAction)titlecaseWord:(id)sender {
-    NSMutableArray<NSValue *> *ranges = [[NSMutableArray alloc] init];
+- (void)titlecaseWord:(id)sender {
+    if (self.isEditable == NO) {
+        return;
+    }
+    [self selectWord:self];
+    NSArray<NSValue *> *ranges = self.selectedRanges.copy;
     NSMutableArray<NSString *> *strings = [[NSMutableArray alloc] init];
-    for (NSValue *rangeValue in self.selectedRanges) {
-        const NSRange selectedRange = rangeValue.rangeValue;
-        const NSRange wordRange = [self.string wordRangeForRange:selectedRange];
-        NSString *text = [self.string substringWithRange:wordRange];
+    for (NSValue *rangeValue in ranges) {
+        NSString *text = [self.string substringWithRange:rangeValue.rangeValue];
         NSString *titlecaseText = text.titlecaseString;
-        [ranges addObject:[NSValue valueWithRange:wordRange]];
         [strings addObject:titlecaseText];
     }
-    if ([self shouldChangeTextInRanges:ranges replacementStrings:strings]) {
-        for (NSInteger rangeIndex = 0; rangeIndex < ranges.count; rangeIndex++) {
-            [self replaceCharactersInRange:ranges[rangeIndex].rangeValue withString:strings[rangeIndex]];
-        }
-        [self setSelectedRanges:ranges];
+    if ([self shouldChangeTextInRanges:ranges replacementStrings:strings] == NO) {
+        return;
     }
+    for (NSInteger rangeIndex = 0; rangeIndex < ranges.count; rangeIndex++) {
+        [self replaceCharactersInRange:ranges[rangeIndex].rangeValue withString:strings[rangeIndex]];
+    }
+    [self setSelectedRanges:ranges];
 }
 
 @end
